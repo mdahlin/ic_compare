@@ -1,5 +1,4 @@
-.env
-/target
+rust/target
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -12,6 +11,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 .venv/
+.env/
 env/
 bin/
 build/

@@ -13,12 +13,9 @@ def rank(X):
 
 def sum_Cerr(C, Ctar):
     """"correlation loss function to minimize"""
-    mod = np.triu(C).flatten()
-    tru = np.triu(Ctar).flatten()
-    ndx = ~np.in1d(mod, [0, 1])
-    mod = mod[ndx]
-    tru = tru[ndx]
-    return np.sum(abs(tru - mod))
+    return (
+        abs(np.triu(C) - np.triu(Ctar)).sum()
+    )
 
 def ICreorder(X, Ctar):
     """Iman Conover reordering"""
@@ -45,7 +42,7 @@ def ICreorder(X, Ctar):
     TT = np.dot(np.dot(M, IF), C)
     # generate targeted rank correlation
     R = rank(TT)
-    # get reordered simulations iwht desired correlation
+    # get reordered simulations with desired correlation
     Y = np.copy(X)
     for j in range(0, n_col):
         Y[:, j] = X[R[:, j], j]
@@ -86,32 +83,35 @@ def IC_IPCreorder(X, Ctar):
     # Initialize IPC after IC
     Cic = np.corrcoef(Y.T)
     Hic = cholesky(Cic) # from Iman Conover
-    Hpr = np.copy(cholesky(Ctar)) # perturb target with error
-    breakpoint()
+    Hta = cholesky(Ctar)
+    Hpr = np.copy(Hta) # perturb target with error
     ndx = ~np.eye(n_col, dtype=bool)
     err = Hpr[ndx]-Hic[ndx] # perturbed target - IC
     Hpr[ndx] = Hpr[ndx] + err
     E0 = 999
-    E1 = sum_Cerr(C=Cic, Ctar=S) # Ctar? or separate variable?
-    Serr_iter = sum_Cerr(C=Cic, Ctar=S) # Ctar? or separate variable?
+    E1 = sum_Cerr(C=Cic, Ctar=Ctar)
+    Serr_iter = sum_Cerr(C=Cic, Ctar=Ctar)
 
     # start iterative improvement
-    while E1 < R0:
+    while E1 < E0:
         #after perturbation, replace last IC steps
-        TT = np.dot(np.dot(M, IF), Hrp)
+        TT = np.dot(np.dot(M, IF), Hpr)
         R = rank(TT)
         Yi = np.copy(X)
         for j in range(0, n_col):
             Yi[:, j] = X[R[:, j], j]
         #calc new correlation and corr error
-        Cic = np.correcoef(Yi.T)
+        Cic = np.corrcoef(Yi.T)
         E0 = np.copy(E1)
-        E1 = sum_Cerr(C=Cic, Ctar=S) # Ctar? or separate variable?
+        E1 = sum_Cerr(C=Cic, Ctar=Ctar)
         Serr_iter = np.append(Serr_iter, E1)
         # calculate new Chol and Chol error
         Hic = cholesky(Cic)
         err = Hta[ndx] - Hic[ndx] # Original target - reordered
         Hpr[ndx] = Hpr[ndx] + err
+
+    print(E0)
+    print(E1)
 
     return Yi, Serr_iter
 
@@ -161,10 +161,10 @@ def IC_IPCreorder(X, Ctar):
 if __name__ == "__main__":
 
     X = np.array([
-        np.linspace(0., 99., 100),
-        np.linspace(0., 99., 100),
-        np.linspace(0., 99., 100),
-        np.linspace(0., 99., 100)
+        np.linspace(0., 99999., 10000),
+        np.linspace(0., 99999., 10000),
+        np.linspace(0., 99999., 10000),
+        np.linspace(0., 99999., 10000)
     ]).T
 
     Ctar = np.array(
@@ -176,7 +176,9 @@ if __name__ == "__main__":
         ]
     )
 
-    IC_IPCreorder(X, Ctar)
+    a, b = IC_IPCreorder(X, Ctar)
+    print(len(b))
+    print(np.corrcoef(a.T))
 
     # # Iman Conover (fast)
     # # Iterated Perturbed Cholesky (int)

@@ -21,7 +21,6 @@ def ICreorder(X, Ctar):
     """Iman Conover reordering"""
     n_sim = X.shape[0]
     n_col = X.shape[1]
-    X.sort(axis=0)
     # Apply a Cholesky decom to get an upper triangular matrix
     C = cholesky(Ctar)
     # create a vector of standard normal quantiles. Divide the quantiles so that their agg has std of 1.0
@@ -54,7 +53,6 @@ def IC_IPCreorder(X, Ctar):
     """Iterated Perturbed Cholesky reordering after IC"""
     n_sim = X.shape[0]
     n_col = X.shape[1]
-    X.sort(axis=0)
     # Apply a Cholesky decom to get an upper triangular matrix
     C = cholesky(Ctar)
     # create a vector of standard normal quantiles. Divide the quantiles so that their agg has std of 1.0
@@ -90,7 +88,6 @@ def IC_IPCreorder(X, Ctar):
     Hpr[ndx] = Hpr[ndx] + err
     E0 = 999
     E1 = sum_Cerr(C=Cic, Ctar=Ctar)
-    Serr_iter = sum_Cerr(C=Cic, Ctar=Ctar)
 
     # start iterative improvement
     while E1 < E0:
@@ -104,16 +101,12 @@ def IC_IPCreorder(X, Ctar):
         Cic = np.corrcoef(Yi.T)
         E0 = np.copy(E1)
         E1 = sum_Cerr(C=Cic, Ctar=Ctar)
-        Serr_iter = np.append(Serr_iter, E1)
         # calculate new Chol and Chol error
         Hic = cholesky(Cic)
         err = Hta[ndx] - Hic[ndx] # Original target - reordered
         Hpr[ndx] = Hpr[ndx] + err
 
-    print(E0)
-    print(E1)
-
-    return Yi, Serr_iter
+    return Yi
 
 # def max_err(C, Ctar):
     # """max correlation discrepancy to track"""
@@ -161,10 +154,10 @@ def IC_IPCreorder(X, Ctar):
 if __name__ == "__main__":
 
     X = np.array([
-        np.linspace(0., 99999., 10000),
-        np.linspace(0., 99999., 10000),
-        np.linspace(0., 99999., 10000),
-        np.linspace(0., 99999., 10000)
+        np.linspace(0., 9999., 10000),
+        np.linspace(0., 9999., 10000),
+        np.linspace(0., 9999., 10000),
+        np.linspace(0., 9999., 10000)
     ]).T
 
     Ctar = np.array(

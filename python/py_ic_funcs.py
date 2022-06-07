@@ -108,82 +108,31 @@ def IC_IPCreorder(X, Ctar):
 
     return Yi
 
-# def max_err(C, Ctar):
-    # """max correlation discrepancy to track"""
-    # return np.max(abs(Ctar - C))
+def ILSreorder(Y, Ctar, n_iter=10000):
+    """Iterated Local Search reordering"""
+    n_sim = Y.shape[0]  # Yic is not going to be modified
+    # initalization
+    Yi = np.copy(Y)  # usually, preordered simlulations from IC
+    C0 = np.corrcoef(Y.T)
+    E0 = sum_Cerr(C0, Ctar=Ctar)
+    # iterative optimziation
+    for ii in range(1, n_iter+1):
+        # identify problematic column with largest disrepencies
+        Cerr = abs(C0 - Ctar)
+        ndx_max = np.argmax(np.apply_along_axis(np.sum, 0, Cerr))
+        # randomly select two components of xj to exhcnage and guarantee that we do not eveluate the same neighbor twice
+        rng = np.random.default_rng()
+        rnd_2ndx = rng.choice(n_sim, size=2, replace=False)
+        Ycand = np.copy(Yi)
+        Ycand[rnd_2ndx, ndx_max] = Ycand[np.flip(rnd_2ndx),ndx_max]
+        #recalc actual corr and error
+        C1 = np.corrcoef(Ycand.T)
+        E1 = sum_Cerr(C1, Ctar=Ctar)
+        # save reordered sims if error decreases
+        if E1 <E0:
+            Yi = np.copy(Ycand)
+            E0 = E1
+            C0 = C1
 
-# def ILSreorder(Y, Ctar, n_iter=10000):
-    # """Iterated Local Search reordering"""
-    # n_sim = Y.shape[0]  # Yic is not going to be modified
-    # # initalization
-    # err_iter = np.empty(shape=(n_iter+1))
-    # Emax_iter = np.empty(shape=(n_iter+1))
-    # col_iter = np.empty(shape=(n_iter+1))
-    # Yi = np.copy(Y)  # usually, preordered simlulations from IC
-    # C0 = np.corrcoef(Y.T)
-    # E0 = sum_Cerr(C0, Ctar=Ctar)
-    # err_iter[0] = E0 # store/track even attemps not accepted
-    # Emax_iter[0] = max_err(C0, Ctar=Ctar)
-    # Cerr = abs(C0 - Ctar)
-    # col_iter[0] = np.argmax(np.apply_along_axis(np.sum, 0, Cerr))
-    # # iterative optimziation
-    # for ii in range(1, n_iter+1):
-        # # identify problematic column with largest disrepencies
-        # Cerr = abs(C0 - Ctar)
-        # ndx_max = np.argmax(np.apply_along_axis(np.sum, 0, Cerr))
-        # col_iter[ii] = ndx_max
-        # # randomly select two components of xj to exhcnage and guarantee that we do not eveluate the same neighbor twice
-        # rnd_2ndx = rng.choise(n_sim, size=2, replace=False)
-        # Ycand = np.copy(Yi)
-        # Ycand[rnd_2ndx, ndx_max] = Ycand[np.flip(rnd_2ndx),ndx_max]
-        # #recalc actual corr and error
-        # C1 = np.corrcoef(Ycand.T)
-        # E1 = sum_Cerr(C1, Ctar=Ctar)
-        # err_iter[ii] = E1
-        # Emax_iter[ii] = max_err(C1, Ctar=Ctar)
-        # # save reordered sims if error decreases
-        # if E1 <E0:
-            # Yi = np.copy(Ycand)
-            # E0 = E1
-            # C0 = C1
-
-    # return Y1, err_iter, C0, Emax_iter, col_iter
-
-
-
-if __name__ == "__main__":
-
-    X = np.array([
-        np.linspace(0., 9999., 10000),
-        np.linspace(0., 9999., 10000),
-        np.linspace(0., 9999., 10000),
-        np.linspace(0., 9999., 10000)
-    ]).T
-
-    Ctar = np.array(
-        [
-            [ 1.00, 0.50, 0.25, 0.05],
-            [ 0.50, 1.00, 0.00, 0.30],
-            [ 0.25, 0.00, 1.00, 0.00],
-            [ 0.05, 0.30, 0.00, 1.00]
-        ]
-    )
-
-    a, b = IC_IPCreorder(X, Ctar)
-    print(len(b))
-    print(np.corrcoef(a.T))
-
-    # # Iman Conover (fast)
-    # # Iterated Perturbed Cholesky (int)
-    # # Iterated Local Search (slow)
-    # Yic = ICreorder(X=X, Ctar=S)
-    # Cic = np.corrcoef(Yic.T)
-    # print(f"Iman Conover correlation disrepency {np.round(np.max(abs(Cic - S)), 3)}")
-
-    # Ypc, Epc = IC_IPCreorder(X=X, Ctar=S)  # includes IC as first step
-    # Cpc = np.corrcoef(Ypc.T)
-    # print(f"Iterated Perturbed Cholesky correlation disrepency {np.round(np.max(abs(Cpc - S)), 3)}")
-
-    # Yls, Els, Cls, Mls, col_err = ILSreorder(Ypc, Ctar=S, n_iter = n_sims * 2) . # start at IPC solution
-    # print(f"Iterated Local Search Cholesky correlation disrepency {np.round(np.max(abs(Cls - S)), 3)}")
+    return Yi
 

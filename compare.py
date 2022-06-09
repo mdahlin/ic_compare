@@ -4,7 +4,7 @@ import numpy as np
 import rs_agg_methods
 import python.py_ic_funcs as py_agg_methods
 
-NSIMS = 100_000
+NSIMS = 10_000
 X = np.array([
     np.linspace(0., 99., NSIMS),
     np.linspace(0., 99., NSIMS),
@@ -53,6 +53,27 @@ start = time()
 rs_res = rs_agg_methods.ic_ipc_reorder(X, Ctar)
 print(f"Rust single run took {time() - start:.2f} seconds")
 py_res = py_agg_methods.IC_IPCreorder(X, Ctar)
+print(f"Python single run took {time() - start:.2f} seconds")
+
+print("Target Matrix")
+print(Ctar)
+
+print("Rust Matrix")
+print(np.corrcoef(rs_res, rowvar=False).round(2))
+
+print("Python Matrix")
+print(np.corrcoef(py_res, rowvar=False).round(2))
+
+print("#" * 20)
+print(" " * 20)
+print("     ILS REORDER    ")
+print(" " * 20)
+print("#" * 20)
+
+start = time()
+rs_res = rs_agg_methods.ils_reorder(X, Ctar, 2 * NSIMS)
+print(f"Rust single run took {time() - start:.2f} seconds")
+py_res = py_agg_methods.ILSreorder(X, Ctar, 2 * NSIMS)
 print(f"Python single run took {time() - start:.2f} seconds")
 
 print("Target Matrix")

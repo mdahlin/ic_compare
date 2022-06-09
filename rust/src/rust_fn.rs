@@ -14,6 +14,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rand::prelude::IteratorRandom;
 
 pub fn ic_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
 
@@ -149,4 +150,51 @@ pub fn  ic_ipc_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
 
     }
     y
+}
+
+
+fn max_axis_error(c1: &Array2<f64>, c2: &Array2<f64>, axis: Axis) -> usize {
+    let diff = c1 - c2;
+    let abs_axis_sum = diff.fold_axis(axis, 0_f64, |r, x| r + x.abs());
+
+    let mut idx = 0;
+    let mut max = 0_f64;
+    for (i, e) in abs_axis_sum.iter().enumerate() {
+        if e > &max {
+            max = *e;
+            idx = i;
+        }
+
+    }
+    idx
+}
+
+pub fn ils_reorder(x: Array2<f64>, ctar: Array2<f64>, niter: usize) -> Array2<f64> {
+    //x here is usually output of an IC func
+    let mut xi = x.clone(); // probably not needed
+
+    let mut c0 = xi.t().pearson_correlation().unwrap();
+    let mut e0 = sum_cerr(&c0, &ctar);
+
+    let mut rng = thread_rng();
+    let sims_pop: Vec<usize> = (0..x.nrows()).collect();
+
+    for _ in 0..niter {
+        let mut xcand = xi.clone();
+        let col_idx = max_axis_error(&ctar, &c0, Axis(0));
+
+        let rnd_2ndx = sims_pop.iter().choose_multiple(&mut rng, 2);
+        xcand.column_mut(col_idx).swap(*rnd_2ndx[0], *rnd_2ndx[1]);
+
+        let c1 = xcand.t().pearson_correlation().unwrap();
+        let e1 = sum_cerr(&c1, &ctar);
+
+        if e1 < e0 {
+            xi = xcand;
+            e0 = e1;
+            c0 = c1;
+        }
+    }
+    xi
+
 }

@@ -16,6 +16,17 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rand::prelude::IteratorRandom;
 
+/// Iman Conover Reordering
+///
+/// Applies transformation proposed by Iman and Conover
+/// (1982) to reorder simulations so column-wise correlation
+/// matches the provided target correlation
+///
+/// * `x` - n by y array of simulations to be reordered
+/// * `ctar` - y by y target correlation matrix
+///
+/// Note: transformation will not result in simulations perfectly
+///       matching the target correlation
 pub fn ic_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
 
     let n_sim = x.shape()[0];
@@ -43,7 +54,7 @@ pub fn ic_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
     let tt = m.dot(&inv_f).dot(&c);
     let r = tt.rank_axis(Axis(1), RankMethod::Minimum) - 1;
 
-    //TODO: more efficient
+    // TODO: more efficient (and separate function)
     let mut y = Array::from_elem((n_sim, n_col), -999.);
     for i in 0..n_sim {
         for j in 0..n_col {
@@ -53,8 +64,17 @@ pub fn ic_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
     y
 }
 
+/// Sum of Correlation Error
+///
+/// Calculates the total absolute difference between the
+/// upper triangular correlation factors
+///
+/// * `c1` - a correlation matrix
+/// * `c2` - a correlation matrix
+///
+/// Notes: assumes `c1` and `c2` symmetric and of the same dimension.
+///        Could probably do something with Zip instead
 fn sum_cerr(c1: &Array2<f64>, c2: &Array2<f64>) -> f64 {
-    // assumes c1 and c2 are correlation matrices of same dimension
     let mut res: f64 = 0.;
     let nrow = &c1.nrows();
     let ncol = &c1.ncols();
@@ -68,6 +88,17 @@ fn sum_cerr(c1: &Array2<f64>, c2: &Array2<f64>) -> f64 {
     res
 }
 
+/// Iterative Perturbed Cholesky Iman Conover Reordering
+///
+/// Expands on Iman Conover Reordering with additional perturbation
+/// to get the resulting simulations closer to the target correlation
+/// than only the Iman Conover methodology alone
+///
+/// * `x` - n by y array of simulations to be reordered
+/// * `ctar` - y by y target correlation matrix
+///
+/// Notes: does not just call `ic_reorder` because other calculated
+///        pieces are needed on top of the output of the funtion
 pub fn  ic_ipc_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
     // start off with IC method
     let n_sim = x.shape()[0];
@@ -103,7 +134,7 @@ pub fn  ic_ipc_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
         }
     }
 
-    // set up for the ILS portion
+    // set up for the IPC portion
     let mut e0 = 999 as f64;
     let mut e1 = 99 as f64;
 
@@ -152,7 +183,16 @@ pub fn  ic_ipc_reorder(x: Array2<f64>, ctar: Array2<f64>) -> Array2<f64> {
     y
 }
 
-
+/// Max Axis Error
+///
+/// Calculates which index (for a specified axis) has th
+/// largest absolute element difference
+///
+/// * `c1` - a correlation matrix
+/// * `c2` - a correlation matrix
+/// * `axis` - Axis(0) for columns; Axis(1) for rows
+///
+/// Notes: assumes `c1` and `c2` are of the same dimension.
 fn max_axis_error(c1: &Array2<f64>, c2: &Array2<f64>, axis: Axis) -> usize {
     let diff = c1 - c2;
     let abs_axis_sum = diff.fold_axis(axis, 0_f64, |r, x| r + x.abs());
@@ -169,8 +209,22 @@ fn max_axis_error(c1: &Array2<f64>, c2: &Array2<f64>, axis: Axis) -> usize {
     idx
 }
 
+/// Iterative Local Search Reordering
+///
+/// ILS process to reduce error between target correlation and
+/// output simlulations column-wise correlation. Faster/more
+/// efficient to call `ic_reorder` or `ic_ipc_reorder` first
+/// and use that was the `x` input
+///
+/// * `x` - n by y array of simulations to be reordered
+/// * `ctar` - y by y target correlation matrix
+/// * `niter` - number of iterations to attempt improvments
+///
+/// Notes: `x` is generally the result of an another reordering function.
+///        Could change `niter` to some sort of error target.
+///        Might want to check if reassigning versus cloning would change
+///          runtime
 pub fn ils_reorder(x: Array2<f64>, ctar: Array2<f64>, niter: usize) -> Array2<f64> {
-    //x here is usually output of an IC func
     let mut xi = x.clone(); // probably not needed
 
     let mut c0 = xi.t().pearson_correlation().unwrap();

@@ -252,3 +252,61 @@ pub fn ils_reorder(x: Array2<f64>, ctar: Array2<f64>, niter: usize) -> Array2<f6
     xi
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sum_cerr() {
+        let c1: Array2<f64> = array![
+            [ 1.00, 0.50, 0.25, 0.05],
+            [ 0.50, 1.00, 0.00, 0.30],
+            [ 0.25, 0.00, 1.00, 0.00],
+            [ 0.05, 0.30, 0.00, 1.00]
+        ];
+
+        let mut c2 = c1.clone();
+
+        for i in 0..c1.nrows() {
+            for j in 0..c1.ncols() {
+                if i != j {
+                    c2[[i, j]] -= 1.
+                }
+            }
+        }
+        let result = sum_cerr(&c1, &c2);
+
+
+        assert_eq!(result, 6f64);
+    }
+
+    #[test]
+    fn test_ils_reorder_improves_corr() {
+        use ndarray::stack;
+        let x: Array2<f64> = stack![
+            Axis(1),
+            Array::range(0., 1000., 1.),
+            Array::range(0., 1000., 1.),
+            Array::range(0., 1000., 1.),
+            Array::range(0., 1000., 1.)
+        ];
+
+        let c1: Array2<f64> = array![
+            [ 1.00, 0.50, 0.25, 0.05],
+            [ 0.50, 1.00, 0.00, 0.30],
+            [ 0.25, 0.00, 1.00, 0.00],
+            [ 0.05, 0.30, 0.00, 1.00]
+        ];
+
+        let initial_corr = x.t().pearson_correlation().unwrap();
+        let initial_err = sum_cerr(&c1, &initial_corr);
+
+        let post_ils = ils_reorder(x, c1, 500); // technically could fail
+        let post_ils_corr = post_ils.t().pearson_correlation().unwrap();
+        let post_ils_err = sum_cerr(&initial_corr, &post_ils_corr);
+
+        assert!(post_ils_err < initial_err);
+
+    }
+}
